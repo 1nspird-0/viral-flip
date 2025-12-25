@@ -1,0 +1,268 @@
+Metadata-Version: 2.4
+Name: viralflip
+Version: 0.1.0
+Summary: Predictive illness onset forecasting using phone sensor data
+Author: ViralFlip Team
+License: MIT
+Keywords: health,prediction,machine-learning,sensors,forecasting
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: scipy>=1.11.0
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: torch>=2.0.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: librosa>=0.10.0
+Requires-Dist: tqdm>=4.65.0
+Requires-Dist: matplotlib>=3.7.0
+Requires-Dist: seaborn>=0.12.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+
+# ViralFlip
+
+**Predictive Illness Onset Forecasting Using Phone Sensor Data**
+
+⚠️ **IMPORTANT SAFETY DISCLAIMER**: This is NOT a medical diagnosis device. ViralFlip provides early warning risk scores with uncertainty estimates for research and education purposes only. Do not use for clinical decision-making.
+
+## Overview
+
+ViralFlip predicts illness onset (e.g., flu-like symptoms, URI) at 24/48/72-hour horizons using passive and active phone sensor data:
+
+- **Voice features**: F0, jitter, shimmer, HNR, MFCCs
+- **Cough events**: Counts, burstiness, temporal patterns
+- **Tapping test**: Motor control via inter-tap intervals
+- **Gait analysis**: Cadence, smoothness, regularity
+- **rPPG (camera)**: Heart rate, HRV proxies
+- **GPS mobility**: Radius of gyration, location entropy
+- **Ambient sensors**: Light patterns, barometric pressure
+- **Screen events**: Sleep proxies, activity patterns
+
+### Key Features
+
+1. **Personal Baseline Memory (PBM)**: Within-person normalization using robust statistics
+2. **Behavior-Drift Debiasing (BDD)**: Remove confounds from mobility/routine changes
+3. **Drift-Lattice Hazard Network (DLHN)**: Multi-horizon prediction with lag structure
+4. **Interpretable explanations**: Per-feature contribution breakdowns with counterfactuals
+5. **Privacy-preserving**: Only derived features stored, no raw audio/video/GPS traces
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/viralflip.git
+cd viralflip
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+
+# Install in development mode
+pip install -e ".[dev]"
+```
+
+### Requirements
+
+- Python 3.11+
+- PyTorch 2.0+
+- NumPy, SciPy, scikit-learn
+- See `pyproject.toml` for full dependencies
+
+## Quick Start
+
+### 1. Generate Synthetic Data
+
+```bash
+python scripts/make_synthetic_episodes.py \
+    --output data/synthetic \
+    --n-users 100 \
+    --days 90 \
+    --seed 42
+```
+
+### 2. Train Model
+
+```bash
+python scripts/train.py \
+    --config configs/default.yaml \
+    --data synthetic \
+    --output runs/my_experiment
+```
+
+### 3. Evaluate Model
+
+```bash
+python scripts/evaluate.py \
+    --run_dir runs/my_experiment
+```
+
+### 4. Run Ablation Studies
+
+```bash
+python scripts/run_ablations.py \
+    --run_dir runs/my_experiment
+```
+
+## Repository Structure
+
+```
+viralflip/
+├── configs/
+│   └── default.yaml          # Default configuration
+├── data/
+│   └── dataset_registry.yaml # Public dataset URLs
+├── src/viralflip/
+│   ├── features/             # Feature extraction modules
+│   │   ├── voice.py          # Voice acoustic features
+│   │   ├── cough.py          # Cough event features
+│   │   ├── tapping.py        # Tapping test features
+│   │   ├── gait_active.py    # Active gait features
+│   │   ├── imu_passive.py    # Passive IMU features
+│   │   ├── rppg.py           # Camera-based heart rate
+│   │   ├── gps.py            # Mobility features
+│   │   ├── light.py          # Ambient light features
+│   │   ├── baro.py           # Barometer features
+│   │   ├── screen.py         # Screen event features
+│   │   └── quality.py        # Quality assessment
+│   ├── baseline/
+│   │   └── pbm.py            # Personal Baseline Memory
+│   ├── debias/
+│   │   └── ridge.py          # Behavior-Drift Debiasing
+│   ├── model/
+│   │   ├── drift_score.py    # Drift score compression
+│   │   ├── lag_lattice.py    # Multi-horizon hazard model
+│   │   ├── interactions.py   # Sparse interactions
+│   │   ├── personalization.py # Per-user calibration
+│   │   └── viralflip_model.py # Main model
+│   ├── train/
+│   │   ├── build_sequences.py # Sequence construction
+│   │   ├── losses.py         # Loss functions
+│   │   └── trainer.py        # Training loop
+│   ├── eval/
+│   │   ├── metrics.py        # AUPRC, AUROC, lead-time
+│   │   ├── calibration.py    # ECE, Brier score
+│   │   └── ablations.py      # Ablation runner
+│   ├── explain/
+│   │   └── explain.py        # Explanation engine
+│   └── utils/
+│       ├── io.py             # I/O utilities
+│       ├── seed.py           # Reproducibility
+│       └── logging.py        # Logging utilities
+├── scripts/
+│   ├── make_synthetic_episodes.py
+│   ├── train.py
+│   ├── evaluate.py
+│   └── run_ablations.py
+├── tests/
+│   ├── test_pbm_no_leakage.py
+│   ├── test_debias_ridge.py
+│   ├── test_lag_lattice_shapes.py
+│   └── test_explanations_counterfactual.py
+├── pyproject.toml
+└── README.md
+```
+
+## Configuration
+
+Key configuration options in `configs/default.yaml`:
+
+```yaml
+data:
+  bin_hours: 6              # Time bin duration
+  horizons: [24, 48, 72]    # Prediction horizons (hours)
+
+pbm:
+  alpha: 0.03               # EMA update rate for mean
+  safe_risk_threshold: 0.30 # Max risk for baseline update
+
+bdd:
+  ridge_lambda: 1.0         # Ridge regularization
+
+model:
+  max_lag_bins: 12          # Maximum lag (12 * 6h = 72h)
+  use_interactions: false   # Sparse interactions (optional)
+
+training:
+  epochs: 100
+  learning_rate: 0.001
+  use_focal_loss: true
+  pos_weight_multiplier: 5.0
+```
+
+## Evaluation Metrics
+
+- **AUPRC**: Area Under Precision-Recall Curve (primary)
+- **AUROC**: Area Under ROC Curve
+- **Lead Time**: Fraction of episodes with early warning
+- **False Alarms/Week**: Operational metric
+- **ECE/Brier**: Calibration metrics
+
+## Mandatory Ablations
+
+The codebase includes ablation studies to verify component importance:
+
+| Ablation | Description |
+|----------|-------------|
+| No PBM | Population-only normalization |
+| No BDD | Skip behavior debiasing |
+| No Voice | Remove voice modality |
+| No Cough | Remove cough modality |
+| No rPPG | Remove camera heart rate |
+| No Gait+Tap | Remove motor features |
+| No GPS | Remove mobility features |
+| No Lag | Only use current timestep |
+| No Personalization | Skip per-user calibration |
+
+## Public Datasets
+
+See `data/dataset_registry.yaml` for links to:
+
+- **Cough/Voice**: COUGHVID, Coswara, COVID-19 Sounds, UK Vocal
+- **rPPG**: UBFC-rPPG, PURE, COHFACE, MMPD
+- **Phone Sensing**: StudentLife, Beiwe, ExtraSensory
+- **HAR/IMU**: UCI HAR, WISDM, RealWorld HAR
+
+## Running Tests
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_pbm_no_leakage.py -v
+
+# Run with coverage
+pytest tests/ --cov=src/viralflip --cov-report=html
+```
+
+## Citation
+
+If you use ViralFlip in your research, please cite:
+
+```bibtex
+@software{viralflip2024,
+  title={ViralFlip: Predictive Illness Onset Forecasting Using Phone Sensor Data},
+  year={2024},
+  url={https://github.com/your-org/viralflip}
+}
+```
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Acknowledgments
+
+This project builds on research in mobile health sensing, digital biomarkers, and interpretable machine learning. We thank the creators of the public datasets listed in the registry.
+
